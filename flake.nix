@@ -32,20 +32,38 @@
       packages = {
         default = pkgs.rustPlatform.buildRustPackage rec {
           pname = "wayvr-dashboard";
-          version = "0-unstable-2025-1-1";
+          version = "0-unstable-2025-1-31";
 
-          src = ./.;
+					# sourceRoot fails if we source locally
+          #src = ./.;
 
-					sourceRoot = "$src/src-tauri";
+					src = pkgs.fetchFromGitHub {
+						owner = "olekolek1000";
+						repo = "wayvr-dashboard";
+						rev = "e68f7d022ca0b4524a9e27065404dcae4d11cf1a";
+						hash = "sha256-Z8YuF9th/SaPPzo1lfw9DIdTlvrGgBapJEzmqhZ72fk=";
+					};
+
+					sourceRoot = "${src.name}/src-tauri";
 
 					useFetchCargoVendor = true;
-					cargoHash = "sha256-uk9IRJDne1mgdRiEMAIwZvV9Iqwju4jGHXZyDGhYbwM=";
+					cargoHash = "sha256-2Rz51zr6O8eCez1UnjkD4FYjdkhmjS/0SvfHV90og1k=";
 
 					frontend = pkgs.buildNpmPackage {
 						inherit version src;
 						pname = "wayvr-dashboard-ui";
 
-						npmDepsHash = "sha256-yitR04QOXZWDj6t0LmsnIqlZmQKLu19mzTflfuZPH3U=";
+						npmDepsHash = "sha256-W2X9g0LFIgkLbZBdr4OqodeN7U/h3nVfl3mKV9dsZTg=";
+
+						nativeBuildInputs = with pkgs; [
+							autoPatchelfHook
+						];
+
+						dontAutoPatchelf = true;
+
+						preBuild = ''
+							autoPatchelf node_modules/sass-embedded-linux-x64/dart-sass/src/dart
+						'';
 
 						postBuild = ''
 							cp -r dist/ $out
@@ -53,10 +71,10 @@
 					};
 
 					postPatch = ''
-						cp -r $frontend ./frontend
-
 						substituteInPlace tauri.conf.json \
-							--replace-fail '"frontendDist": "../dist"' '"frontendDist": "./frontend"'
+							--replace-warn '"frontendDist": "../dist"' '"frontendDist": "${frontend}"'
+						substituteInPlace tauri.conf.json \
+							--replace-warn '"npm run build"' '""'
 					'';
 
           nativeBuildInputs = with pkgs; [
@@ -66,6 +84,7 @@
 					];
 
 					buildInputs = with pkgs; [
+						alsa-lib
 						curl
 						dbus
 						glib
@@ -78,6 +97,8 @@
 					];
 
 					doCheck = false;
+
+					meta.mainProgram = "wayvr_dashboard";
         };
       };
     };
